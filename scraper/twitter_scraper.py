@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+import pickle
 from progress import Progress
 from scroller import Scroller
 from tweet import Tweet
@@ -41,9 +42,11 @@ class Twitter_Scraper:
         scrape_username=None,
         scrape_hashtag=None,
         scrape_query=None,
+        scrape_list=None,
         scrape_poster_details=False,
         scrape_latest=True,
         scrape_top=False,
+        proxy=None,
     ):
         print("Initializing Twitter Scraper...")
         self.mail = mail
@@ -64,7 +67,7 @@ class Twitter_Scraper:
         self.max_tweets = max_tweets
         self.progress = Progress(0, max_tweets)
         self.router = self.go_to_home
-        self.driver = self._get_driver()
+        self.driver = self._get_driver(proxy)
         self.actions = ActionChains(self.driver)
         self.scroller = Scroller(self.driver)
         self._config_scraper(
@@ -72,6 +75,7 @@ class Twitter_Scraper:
             scrape_username,
             scrape_hashtag,
             scrape_query,
+            scrape_list,
             scrape_latest,
             scrape_top,
             scrape_poster_details,
@@ -83,6 +87,7 @@ class Twitter_Scraper:
         scrape_username=None,
         scrape_hashtag=None,
         scrape_query=None,
+        scrape_list=None,
         scrape_latest=True,
         scrape_top=False,
         scrape_poster_details=False,
@@ -99,6 +104,7 @@ class Twitter_Scraper:
             if scrape_hashtag is not None
             else None,
             "query": scrape_query,
+            "list": scrape_list,
             "tab": "Latest" if scrape_latest else "Top" if scrape_top else "Latest",
             "poster_details": scrape_poster_details,
         }
@@ -114,12 +120,28 @@ class Twitter_Scraper:
         elif scrape_query is not None:
             self.scraper_details["type"] = "Query"
             self.router = self.go_to_search
+        elif scrape_list is not None:
+            self.scraper_details["type"] = "List"
+            self.router = self.go_to_list
         else:
             self.scraper_details["type"] = "Home"
             self.router = self.go_to_home
         pass
 
-    def _get_driver(self):
+    def save_cookies(self, path):
+        with open(path, 'wb') as file:
+            pickle.dump(self.driver.get_cookies(), file)
+
+    def load_cookies(self, path):
+        with open(path, 'rb') as file:
+            cookies = pickle.load(file)
+            for cookie in cookies:
+                self.driver.add_cookie(cookie)
+
+    def _get_driver(
+        self,
+        proxy=None,
+    ):
         print("Setup WebDriver...")
         header = Headers().generate()["User-Agent"]
 
@@ -133,6 +155,8 @@ class Twitter_Scraper:
         browser_option.add_argument("--disable-notifications")
         browser_option.add_argument("--disable-popup-blocking")
         browser_option.add_argument("--user-agent={}".format(header))
+        if proxy is not None:
+            browser_option.add_argument("--proxy-server=%s" % proxy)
 
         # For Hiding Browser
         browser_option.add_argument("--headless")
@@ -186,6 +210,13 @@ class Twitter_Scraper:
         try:
             self.driver.maximize_window()
             self.driver.get(TWITTER_LOGIN_URL)
+
+            cookie_path = 'twitter_cookies.pkl'
+            if os.path.exists(cookie_path):
+                self.load_cookies(cookie_path)
+                print('Cookies loaded')
+                return
+
             sleep(3)
 
             self._input_username()
@@ -210,6 +241,8 @@ class Twitter_Scraper:
 - Password is incorrect
 """
                 )
+
+            self.save_cookies(cookie_path)
 
             print()
             print("Login Successful")
@@ -346,6 +379,17 @@ It may be due to the following:
             sleep(3)
         pass
 
+    def go_to_list(self):
+        if self.scraper_details["list"] is None or self.scraper_details["list"] == "":
+            print("List is not set.")
+            sys.exit(1)
+        else:
+            url = f"https://twitter.com/i/lists/{self.scraper_details['list']}"
+
+            self.driver.get(url)
+            sleep(3)
+        pass
+
     def get_tweet_cards(self):
         self.tweet_cards = self.driver.find_elements(
             "xpath", '//article[@data-testid="tweet" and not(@disabled)]'
@@ -373,6 +417,7 @@ It may be due to the following:
         scrape_username=None,
         scrape_hashtag=None,
         scrape_query=None,
+        scrape_list=None,
         scrape_latest=True,
         scrape_top=False,
         scrape_poster_details=False,
@@ -383,6 +428,7 @@ It may be due to the following:
             scrape_username,
             scrape_hashtag,
             scrape_query,
+            scrape_list,
             scrape_latest,
             scrape_top,
             scrape_poster_details,
@@ -407,6 +453,12 @@ It may be due to the following:
             print(
                 "Scraping {} Tweets from {} search...".format(
                     self.scraper_details["tab"], self.scraper_details["query"]
+                )
+            )
+        elif self.scraper_details["type"] == "List":
+            print(
+                "Scraping {} Tweets from {} list...".format(
+                    self.scraper_details["tab"], self.scraper_details["list"]
                 )
             )
         elif self.scraper_details["type"] == "Home":

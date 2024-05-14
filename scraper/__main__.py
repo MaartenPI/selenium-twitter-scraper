@@ -89,6 +89,14 @@ def main():
         )
 
         parser.add_argument(
+            "-l",
+            "--list",
+            type=str,
+            default=None,
+            help="Twitter list. Scrape tweets from a list.",
+        )
+
+        parser.add_argument(
             "-a",
             "--add",
             type=str,
@@ -154,6 +162,7 @@ def main():
                 scrape_username=args.username,
                 scrape_hashtag=args.hashtag,
                 scrape_query=args.query,
+                scrape_list=args.list,
                 scrape_latest=args.latest,
                 scrape_top=args.top,
                 scrape_poster_details="pd" in additional_data,

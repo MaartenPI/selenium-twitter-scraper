@@ -17,7 +17,7 @@ pip install -r requirements.txt
 2. Open `.env` and update environment variables
 
 ```bash
-TWITTER_USERNAME=# Your Twitter Handle (e.g. @username)
+TWITTER_MAIL=# Your Twitter Handle (e.g. @username)
 TWITTER_USERNAME=# Your Twitter Username
 TWITTER_PASSWORD=# Your Twitter Password
 ```
