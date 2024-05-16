@@ -59,6 +59,17 @@ class Tweet:
         except NoSuchElementException:
             self.verified = False
 
+        try:
+            self.image = ""
+
+            images = card.find_elements(
+                "xpath", './/img[@alt="Image"]'
+            )
+            image_src = [img.get_attribute("src") for img in images]
+            self.image = ",".join(str(img) for img in image_src)
+        except NoSuchElementException:
+            self.image = ""
+
         self.content = ""
         contents = card.find_elements(
             "xpath",
@@ -272,6 +283,7 @@ class Tweet:
             self.user_id,
             self.following_cnt,
             self.followers_cnt,
+            self.image,
         )
 
         pass
