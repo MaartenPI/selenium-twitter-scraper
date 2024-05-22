@@ -164,3 +164,4 @@ cython_debug/
 bin/
 pyvenv.cfg
 twitter_cookies.pkl
+watcher/

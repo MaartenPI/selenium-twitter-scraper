@@ -2,6 +2,7 @@ import os
 import sys
 import pandas as pd
 import pickle
+import random
 from progress import Progress
 from scroller import Scroller
 from tweet import Tweet
@@ -211,11 +212,15 @@ class Twitter_Scraper:
             self.driver.maximize_window()
             self.driver.get(TWITTER_LOGIN_URL)
 
-            cookie_path = 'twitter_cookies.pkl'
-            if os.path.exists(cookie_path):
-                self.load_cookies(cookie_path)
-                print('Cookies loaded')
-                return
+            print('Loading cookies...')
+            try:
+                cookie_path = 'twitter_cookies.pkl'
+                if os.path.exists(cookie_path):
+                    self.load_cookies(cookie_path)
+                    print('Cookies loaded')
+                    return
+            except Exception as e:
+                print(f"Failed loading cookies: {e}")
 
             sleep(3)
 
@@ -422,6 +427,7 @@ It may be due to the following:
         scrape_top=False,
         scrape_poster_details=False,
         router=None,
+        halt_at_tweet=None,
     ):
         self._config_scraper(
             max_tweets,
@@ -478,9 +484,25 @@ It may be due to the following:
         added_tweets = 0
         empty_count = 0
         retry_cnt = 0
+        halt_cnt = 0
 
         while self.scroller.scrolling:
             try:
+                if halt_at_tweet and isinstance(halt_at_tweet, str):
+                    halt_list = halt_at_tweet.split(',')
+                    halt_count = len(halt_list)
+                else:
+                    halt_list = []
+                    halt_count = 0
+
+                # Calculate the threshold for halting
+                halt_threshold = max(1, round(halt_count * 0.1))
+
+                # Check if halt_cnt exceeds the threshold
+                if halt_cnt > halt_threshold:
+                    self.scroller.scrolling = False
+                    break
+
                 self.get_tweet_cards()
                 added_tweets = 0
 
@@ -512,6 +534,12 @@ It may be due to the following:
                                         added_tweets += 1
                                         self.progress.print_progress(len(self.data), False, 0, no_tweets_limit)
 
+                                        if halt_at_tweet is not None:
+                                            if tweet.tweet[14] in halt_at_tweet:
+                                                print('Found tweet. Counting up')
+                                                halt_cnt += 1
+                                                break
+
                                         if len(self.data) >= self.max_tweets and not no_tweets_limit:
                                             self.scroller.scrolling = False
                                             break
@@ -525,6 +553,8 @@ It may be due to the following:
                             continue
                     except NoSuchElementException:
                         continue
+
+                sleep(random.randint(3, 10))
 
                 if len(self.data) >= self.max_tweets and not no_tweets_limit:
                     break
@@ -605,7 +635,7 @@ It may be due to the following:
             "Emojis": [tweet[11] for tweet in self.data],
             "Profile Image": [tweet[12] for tweet in self.data],
             "Tweet Link": [tweet[13] for tweet in self.data],
-            "Tweet ID": [f"tweet_id:{tweet[14]}" for tweet in self.data],
+            "Tweet ID": [tweet[14] for tweet in self.data],
             "Image": [tweet[18] for tweet in self.data],
         }
 

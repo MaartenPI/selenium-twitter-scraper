@@ -91,7 +91,7 @@ def main():
         parser.add_argument(
             "-l",
             "--list",
-            type=str,
+            type=int,
             default=None,
             help="Twitter list. Scrape tweets from a list.",
         )
@@ -114,6 +114,13 @@ def main():
             "--top",
             action="store_true",
             help="Scrape top tweets",
+        )
+
+        parser.add_argument(
+            "--halt",
+            type=str,
+            default=None,
+            help="Halt at these tweet ids via a comma separated list. Since Twitter sometimes skips over tweets, it's advisable to add a comma separated list of tweet ids.",
         )
 
         args = parser.parse_args()
@@ -166,6 +173,7 @@ def main():
                 scrape_latest=args.latest,
                 scrape_top=args.top,
                 scrape_poster_details="pd" in additional_data,
+                halt_at_tweet=args.halt,
             )
             scraper.save_to_csv()
             if not scraper.interrupted:
